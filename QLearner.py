@@ -63,20 +63,31 @@ class QLearner:
                 factor *= 3
         return idx
 
-    def encode_state(self, i, j, heading_idx, S):
+    def encode_state(self, i, j, heading_idx, S, coverage_ratio=None):
         """
-        综合局部 patch + 航向，生成完整的离散状态标识。
+        综合局部 patch + 航向 + 全局覆盖进度，生成完整的离散状态标识。
 
         参数:
-            i, j        : UAV 当前行列坐标
-            heading_idx : 当前航向索引 (0~7)
-            S           : 覆盖状态矩阵
+            i, j           : UAV 当前行列坐标
+            heading_idx    : 当前航向索引 (0~7)
+            S              : 覆盖状态矩阵
+            coverage_ratio : 全局覆盖率 [0.0, 1.0]（可选）
         返回:
             state_tuple : 用作 Q 表键的元组
         """
         ph = self._patch_hash(i, j, S)
+        # 覆盖率分箱：0~20% → 0, 20~40% → 1, ..., 80~100% → 4
+        if coverage_ratio is not None:
+            cov_bin = min(int(coverage_ratio * 5), 4)
+        else:
+            cov_bin = None
+
         if self.use_heading:
+            if cov_bin is not None:
+                return (ph, heading_idx, cov_bin)
             return (ph, heading_idx)
+        if cov_bin is not None:
+            return (ph, cov_bin)
         return (ph,)
 
     def select_action(self, s, i, j, allowed_actions, S):

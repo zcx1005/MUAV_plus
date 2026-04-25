@@ -21,7 +21,7 @@ from eval import evaluate_episode
 # ===== 基本参数 =====
 POLY_FILE = "park.poly"   # 多边形区域文件路径
 CELL_SIZE = 50.0           # 栅格大小（米）
-N_UAV = 3                # UAV 数量
+N_UAV = 2               # UAV 数量
 NUM_EPISODES = 10000       # 训练总轮数
 MAX_STEPS_PER_EP = 1500    # 每轮最大步数（防止死循环）
 
@@ -109,20 +109,45 @@ def plot_best_paths(polygon_rot, rows_list, cols_list, best_paths, cell_size,
         plt.close(fig)
 
 
-def plot_reward_convergence(episode_rewards, save_path=None, win=50):
+def plot_reward_convergence(episode_rewards, episode_steps=None,
+                            max_steps=1500, save_path=None, win=50):
     """
     绘制奖励收敛曲线图。
+    包含：全部 reward 散点、全部 MA、仅 valid episode 的 MA、best-so-far reward。
 
     参数:
         episode_rewards : list[float] — 每轮的总奖励
+        episode_steps   : list[int]   — 每轮步数（用于区分 valid/invalid）
+        max_steps       : int         — MAX_STEPS_PER_EP（invalid 的步数等于此值）
         save_path       : str         — 保存路径
         win             : int         — 移动平均窗口大小
     """
     fig, ax = plt.subplots(figsize=(10, 5))
     eps = np.arange(len(episode_rewards))
-    ax.plot(eps, episode_rewards, alpha=0.25, label="Reward")
+    rewards = np.asarray(episode_rewards, dtype=float)
+
+    ax.plot(eps, rewards, alpha=0.15, color="lightblue", label="Reward")
     ma = _moving_avg(episode_rewards, win)
-    ax.plot(eps, ma, label=f"MA({win})")
+    ax.plot(eps, ma, label=f"MA({win})", color="orange")
+
+    # 仅 valid episode 的 MA（invalid 的 reward 用 NaN 替代）
+    if episode_steps is not None:
+        valid_rewards = np.where(
+            np.asarray(episode_steps) < max_steps, rewards, np.nan
+        )
+        ma_valid = _moving_avg(valid_rewards, win)
+        ax.plot(eps, ma_valid, label=f"Valid MA({win})", color="green",
+                linewidth=1.5)
+
+    # best-so-far reward 线
+    best_sf = np.full(len(rewards), np.nan)
+    cur_best = -np.inf
+    for t in range(len(rewards)):
+        if rewards[t] > cur_best:
+            cur_best = rewards[t]
+        best_sf[t] = cur_best
+    ax.plot(eps, best_sf, label="Best-so-far", color="red", linewidth=1.2)
+
     ax.set_xlabel("Episode")
     ax.set_ylabel("Total Reward")
     ax.set_title("Reward Convergence")
@@ -258,7 +283,8 @@ def main():
                 learner = q_learners[uav_id]
                 i, j = env.uav_cells[uav_id]
                 heading_idx = env.uav_heading[uav_id]
-                s = learner.encode_state(i, j, heading_idx, env.S)
+                cov_ratio = obs["coverage_ratio"]
+                s = learner.encode_state(i, j, heading_idx, env.S, cov_ratio)
                 states.append(s)
 
                 allowed = env.get_legal_actions_local(uav_id)
@@ -277,7 +303,8 @@ def main():
 
                 i2, j2 = env.uav_cells[uav_id]
                 heading_idx2 = env.uav_heading[uav_id]
-                s_next = learner.encode_state(i2, j2, heading_idx2, env.S)
+                cov_ratio2 = obs["coverage_ratio"]
+                s_next = learner.encode_state(i2, j2, heading_idx2, env.S, cov_ratio2)
                 learner.update(s, a, r, s_next, done)
 
                 # 记录路径（包含所有位置，即使重复）
@@ -365,6 +392,8 @@ def main():
                         save_path=os.path.join(out_dir, "best_paths.png"))
 
     plot_reward_convergence(episode_rewards,
+                            episode_steps=episode_steps_list,
+                            max_steps=MAX_STEPS_PER_EP,
                             save_path=os.path.join(out_dir, "reward_convergence.png"))
     plot_steps_history(episode_steps_list,
                        save_path=os.path.join(out_dir, "steps_history.png"))
