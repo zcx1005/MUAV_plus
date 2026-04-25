@@ -58,6 +58,7 @@ class MultiUAVCoverageEnv:
         self.uav_heading = None
         self.visited = None
         self.S = None
+        self.straight_streak = np.zeros(self.n_uav, dtype=int)
 
     def reset(self):
         """
@@ -71,6 +72,7 @@ class MultiUAVCoverageEnv:
         self.owner = -np.ones_like(self.S, dtype=int)
         self.visited = np.zeros((self.n_uav, self.n_rows, self.n_cols), dtype=bool)
         self.in_roi = np.zeros(self.n_uav, dtype=bool)
+        self.straight_streak = np.zeros(self.n_uav, dtype=int)
 
         # 所有 UAV 从 (0,0) 起飞，初始航向为 East
         start_i, start_j = 0, 0
@@ -328,6 +330,14 @@ class MultiUAVCoverageEnv:
                     if new_cover and ddeg > 0:
                         rewards[uav_id] += 0.03
                     self.uav_heading[uav_id] = new_h
+
+                    # 直飞奖励
+                    if new_cover and new_h == prev_h:
+                        self.straight_streak[uav_id] += 1
+                        streak = min(self.straight_streak[uav_id], 4)  # 上限4
+                        rewards[uav_id] += 0.1 * streak
+                    else:
+                        self.straight_streak[uav_id] = 0
             else:
                 # 原地不动（被碰撞/越界回退导致）→ 轻微惩罚
                 rewards[uav_id] -= 0.1
