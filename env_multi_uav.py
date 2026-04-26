@@ -299,7 +299,7 @@ class MultiUAVCoverageEnv:
             # new_cover = False
             elif self.visited[uav_id, ni, nj]:
                 # 重复走自己已访问的格子 → 惩罚
-                rewards[uav_id] -= 10
+                rewards[uav_id] -= 5
             else:
                 # 首次访问 → 标记归属
                 self.visited[uav_id, ni, nj] = True
