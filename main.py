@@ -283,8 +283,13 @@ def main():
                 learner = q_learners[uav_id]
                 i, j = env.uav_cells[uav_id]
                 heading_idx = env.uav_heading[uav_id]
-                cov_ratio = obs["coverage_ratio"]
-                s = learner.encode_state(i, j, heading_idx, env.S, cov_ratio)
+                # 计算到最近其他 UAV 的曼哈顿距离
+                nearest_d = min(
+                    (abs(i - env.uav_cells[u][0]) + abs(j - env.uav_cells[u][1])
+                     for u in range(N_UAV) if u != uav_id),
+                    default=999
+                )
+                s = learner.encode_state(i, j, heading_idx, env.S, nearest_d)
                 states.append(s)
 
                 allowed = env.get_legal_actions_local(uav_id)
@@ -303,8 +308,12 @@ def main():
 
                 i2, j2 = env.uav_cells[uav_id]
                 heading_idx2 = env.uav_heading[uav_id]
-                cov_ratio2 = obs["coverage_ratio"]
-                s_next = learner.encode_state(i2, j2, heading_idx2, env.S, cov_ratio2)
+                nearest_d2 = min(
+                    (abs(i2 - env.uav_cells[u][0]) + abs(j2 - env.uav_cells[u][1])
+                     for u in range(N_UAV) if u != uav_id),
+                    default=999
+                )
+                s_next = learner.encode_state(i2, j2, heading_idx2, env.S, nearest_d2)
                 learner.update(s, a, r, s_next, done)
 
                 # 记录路径（包含所有位置，即使重复）

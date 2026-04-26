@@ -63,31 +63,36 @@ class QLearner:
                 factor *= 3
         return idx
 
-    def encode_state(self, i, j, heading_idx, S, coverage_ratio=None):
+    def encode_state(self, i, j, heading_idx, S, nearest_dist=None):
         """
-        综合局部 patch + 航向 + 全局覆盖进度，生成完整的离散状态标识。
+        综合局部 patch + 航向 + 最近 UAV 距离，生成完整的离散状态标识。
 
         参数:
-            i, j           : UAV 当前行列坐标
-            heading_idx    : 当前航向索引 (0~7)
-            S              : 覆盖状态矩阵
-            coverage_ratio : 全局覆盖率 [0.0, 1.0]（可选）
+            i, j         : UAV 当前行列坐标
+            heading_idx  : 当前航向索引 (0~7)
+            S            : 覆盖状态矩阵
+            nearest_dist : 到最近其他 UAV 的曼哈顿距离（可选）
         返回:
             state_tuple : 用作 Q 表键的元组
         """
         ph = self._patch_hash(i, j, S)
-        # 覆盖率分箱：0~20% → 0, 20~40% → 1, ..., 80~100% → 4
-        if coverage_ratio is not None:
-            cov_bin = min(int(coverage_ratio * 5), 4)
+        # 距离分桶：0=紧邻(1~2格), 1=近(3~5格), 2=远(>5格)
+        if nearest_dist is not None:
+            if nearest_dist <= 2:
+                dist_bin = 0
+            elif nearest_dist <= 5:
+                dist_bin = 1
+            else:
+                dist_bin = 2
         else:
-            cov_bin = None
+            dist_bin = None
 
         if self.use_heading:
-            if cov_bin is not None:
-                return (ph, heading_idx, cov_bin)
+            if dist_bin is not None:
+                return (ph, heading_idx, dist_bin)
             return (ph, heading_idx)
-        if cov_bin is not None:
-            return (ph, cov_bin)
+        if dist_bin is not None:
+            return (ph, dist_bin)
         return (ph,)
 
     def select_action(self, s, i, j, allowed_actions, S):
