@@ -291,7 +291,7 @@ class MultiUAVCoverageEnv:
             if cell_owner != -1 and cell_owner != uav_id:
                 # 别人的格子 → 回到原位 + 惩罚 软约束版本，跨区惩罚
                 # self.uav_cells[uav_id] = (i_old, j_old)
-                rewards[uav_id] -= 1
+                rewards[uav_id] -= 0.5
 
                 # continue
 
@@ -299,7 +299,7 @@ class MultiUAVCoverageEnv:
             # new_cover = False
             elif self.visited[uav_id, ni, nj]:
                 # 重复走自己已访问的格子 → 惩罚
-                rewards[uav_id] -= 0.5
+                rewards[uav_id] -= 10
             else:
                 # 首次访问 → 标记归属
                 self.visited[uav_id, ni, nj] = True
