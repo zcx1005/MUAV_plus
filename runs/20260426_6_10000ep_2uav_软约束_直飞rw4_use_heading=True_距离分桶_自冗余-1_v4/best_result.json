@@ -1,0 +1,21 @@
+{
+  "best_steps": 314,
+  "roi_total_cells": 498,
+  "n_uav": 2,
+  "cover_cells_each": [
+    252,
+    246
+  ],
+  "cover_ratio_each": [
+    0.5060240963855421,
+    0.4939759036144578
+  ],
+  "redundant_steps_each": [
+    61,
+    67
+  ],
+  "redundant_ratio_each": [
+    0.19488817891373802,
+    0.21405750798722045
+  ]
+}

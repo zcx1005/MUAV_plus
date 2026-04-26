@@ -395,7 +395,7 @@ def main():
                     y = rows_list[i] + CELL_SIZE / 2.0
                     f.write(f"{uav_id},{step},{i},{j},{x:.2f},{y:.2f}\n")
 
-    # 5) 三张图
+    # 5) 结果图
     if best_paths is not None:
         plot_best_paths(polygon_rot, rows_list, cols_list, best_paths, CELL_SIZE,
                         save_path=os.path.join(out_dir, "best_paths.png"))
