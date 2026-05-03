@@ -21,7 +21,7 @@ from eval import evaluate_episode
 # ===== 基本参数 =====
 POLY_FILE = "park.poly"   # 多边形区域文件路径
 CELL_SIZE = 50.0           # 栅格大小（米）
-N_UAV = 3               # UAV 数量
+N_UAV = 2               # UAV 数量
 NUM_EPISODES = 10000       # 训练总轮数
 MAX_STEPS_PER_EP = 1500    # 每轮最大步数（防止死循环）
 
