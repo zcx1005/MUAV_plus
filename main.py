@@ -21,7 +21,7 @@ from eval import evaluate_episode
 # ===== 基本参数 =====
 POLY_FILE = "park.poly"   # 多边形区域文件路径
 CELL_SIZE = 50.0           # 栅格大小（米）
-N_UAV = 2               # UAV 数量
+N_UAV = 3               # UAV 数量
 NUM_EPISODES = 10000       # 训练总轮数
 MAX_STEPS_PER_EP = 1500    # 每轮最大步数（防止死循环）
 
@@ -257,12 +257,21 @@ def main():
     out_dir = make_run_dir(NUM_EPISODES, N_UAV)
     print(f"输出目录: {out_dir}")
 
+    # ===== 冻结交替训练参数 =====
+    PHASE_LENGTH = 1000  # 每个阶段的 episode 数（交替周期）
+
     # ===== 训练循环 =====
     for ep in range(NUM_EPISODES):
-        # 设置当前轮的 epsilon（所有 UAV 统一）
+        # 冻结交替：确定当前被训练的 UAV
+        active_uav = (ep // PHASE_LENGTH) % N_UAV
+
+        # 设置 epsilon：活跃 UAV 正常探索，冻结 UAV 纯利用
         eps = max(eps_end, eps_start * (eps_decay ** ep))
         for u in range(N_UAV):
-            q_learners[u].epsilon = eps
+            if u == active_uav:
+                q_learners[u].epsilon = eps
+            else:
+                q_learners[u].epsilon = 0.0  # 冻结：纯利用，不探索
 
         # 重置环境
         obs = env.reset()
@@ -299,7 +308,7 @@ def main():
             # 所有 UAV 同时执行动作
             obs, rewards, done, info = env.step_joint(actions)
 
-            # 各自更新自己的 Q 表
+            # 只更新活跃 UAV 的 Q 表（冻结的 UAV 不更新）
             for uav_id in range(N_UAV):
                 learner = q_learners[uav_id]
                 s = states[uav_id]
@@ -314,7 +323,9 @@ def main():
                     default=999
                 )
                 s_next = learner.encode_state(i2, j2, heading_idx2, env.S, nearest_d2)
-                learner.update(s, a, r, s_next, done)
+                if uav_id == active_uav:
+                    learner.update(s, a, r, s_next, done)
+                # 冻结的 UAV 不调用 update()，Q 表保持不变
 
                 # 记录路径（包含所有位置，即使重复）
                 paths[uav_id].append((i2, j2))

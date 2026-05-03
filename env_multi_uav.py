@@ -334,7 +334,7 @@ class MultiUAVCoverageEnv:
                     # 直飞奖励
                     if new_cover and new_h == prev_h:
                         self.straight_streak[uav_id] += 1
-                        streak = min(self.straight_streak[uav_id], 4)  # 上限4
+                        streak = min(self.straight_streak[uav_id], 2)  # 上限4
                         rewards[uav_id] += 0.1 * streak
                     else:
                         self.straight_streak[uav_id] = 0
